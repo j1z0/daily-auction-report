@@ -12,6 +12,9 @@ from subprocess import call
 
 from check_days import *
 
+#OFFICE_CMD = "libreoffice"
+OFFICE_CMD = "soffice"
+
 client = handshake('http://dailyauctions.tilde.sg/login/', None, {'username':os.environ.get('login_username', 'Not Set'), 'password':os.environ.get('login_password', 'Not Set')}, None)
 
 yesterday = getLastValidDay()
@@ -51,10 +54,11 @@ qty_dict = {}
 items = get_grasshopper_items_from_url(client, params, qty_dict, metadata)
 
 print 'Nikkei 80 Big Close'
-write_to_xlsx('NikkeiBigClose80.xlsx', items, qty_dict, metadata)
+out_path = write_to_xlsx('NikkeiBigClose80.xlsx', items, qty_dict, metadata)
 
 ## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/NK225_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
+call([OFFICE_CMD, "--headless", "--invisible", "--convert-to", "pdf", out_path +
+      "NK225_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", out_path])
 
 params = {
 	'auction':'NK225_T_open', 
