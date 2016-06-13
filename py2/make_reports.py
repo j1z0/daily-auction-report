@@ -12,170 +12,150 @@ from subprocess import call
 
 from check_days import *
 
-#OFFICE_CMD = "libreoffice"
+# OFFICE_CMD = "libreoffice"
 OFFICE_CMD = "soffice"
 
-client = handshake('http://dailyauctions.tilde.sg/login/', None, {'username':os.environ.get('login_username', 'Not Set'), 'password':os.environ.get('login_password', 'Not Set')}, None)
+def do_auction_reports():
+    yesterday = getLastValidDay()
+    print "we are going to do auction reports for the date:" + yesterday.strftime('%Y %b %d, %a ')
+    yesterday_date = yesterday.strftime('%Y-%m-%d')
+    yesterday_date_in_iso = yesterday.strftime('%Y%m%d')
 
-yesterday = getLastValidDay()
+    # List of Dictionary to hold info about pdfs to create
+    # xls_name, pdf_name, params, items_getter
+    file_tasks = [
+        {'xls_name'    : 'NikkeiBigClose80.xlsx',
+         'pdf_name'    : 'NK225_T_close_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction':'NK225_T_close',
+                            'qty':'80',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Big',
+                            'period': 'Close',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_grasshopper_items_from_url,
+        },
+        {'xls_name'    : 'NikkeiBigOpen80.xlsx',
+         'pdf_name'    : 'NK225_T_open_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction': 'NK225_T_open',
+                            'qty': '80',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Big',
+                            'period': 'Open',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_grasshopper_items_from_url,
+        },
+        {'xls_name'    : 'NikkeiMiniClose250.xlsx',
+         'pdf_name'    : 'NK225M_T_close_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction':'NK225M_T_close',
+                            'qty':'250',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Mini',
+                            'period': 'Close',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+        {'xls_name'    : 'NikkeiMiniOpen250.xlsx',
+         'pdf_name'    : 'NK225M_T_open_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction':'NK225M_T_open',
+                            'qty':'250',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Mini',
+                            'period': 'Open',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+        {'xls_name'    : 'TopixClose50.xlsx',
+         'pdf_name'    : 'TPX_T_close_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction':'TPX_T_close',
+                            'qty':'50',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Topix',
+                            'period': 'Close',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+        {'xls_name'    : 'TopixOpen50.xlsx',
+         'pdf_name'    : 'TPX_T_open_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction':'TPX_T_open',
+                            'qty':'50',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Topix',
+                            'period': 'Open',
+                            'filename_prefix': ''
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+        {'xls_name'    : 'DerwinNikkei40.xlsx',
+         'pdf_name'    : 'Derwin40_NK225_T_close_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction': 'NK225_T_close',
+                            'qty':'40',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Big',
+                            'period': 'Close',
+                            'filename_prefix': 'Derwin40_'
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+        {'xls_name'    : 'DerwinNikkei40.xlsx',
+         'pdf_name'    : 'Derwin40_NK225_T_open_' + yesterday_date_in_iso + ".xlsx",
+         'params'      : {
+                            'auction': 'NK225_T_open',
+                            'qty':'40',
+                            'date':yesterday_date_in_iso,
+                            'symbol': 'Nikkei Big',
+                            'period': 'Open',
+                            'filename_prefix': 'Derwin40_'
+                         },
+         'item_getter' : get_normal_items_from_url,
+        },
+    ]
 
-print "we are going to do auction reports for the date:" + yesterday.strftime('%Y %b %d, %a ')
+    client = handshake('http://dailyauctions.tilde.sg/login/', None, {'username':os.environ.get('login_username', 'Not Set'), 'password':os.environ.get('login_password', 'Not Set')}, None)
 
-yesterday_date = yesterday.strftime('%Y-%m-%d')
-yesterday_date_in_iso = yesterday.strftime('%Y%m%d')
+    metadata = {"auction": "", "date": "", "qty": 0}
 
-fileparams = {
-	"company": "Grasshopper",
-	"symbol":"NK225M",
-	"period": "T_close",
-	"filename": "{company}_{symbol_short}_{period}_{date}",
-	"qty" : "50",
-	"match_price": "",
-	"date": yesterday_date
-}
+    for task in file_tasks:
+        qty_dict = {}
+        items = task['item_getter'](client, task['params'], qty_dict, metadata)
 
-metadata = {"auction": "", "date": "", "qty": 0}
+        print(task['xls_name'])
+        out_path = write_to_xlsx(task['xls_name'], items, qty_dict, metadata)
 
-# params = {'auction':fileparams['symbol'] + '_' + fileparams['period'], 'qty':fileparams['qty'], 'roll':'n'}
-# items = get_normal_items_from_url(client, params, fileparams)
-# write_to_file(fileparams['filename']'.txt', items)
-# json.dump(d, open("text.txt",'w'))
+        ## write a function to convert the xlsx into pdf using libreoffice
+        call([OFFICE_CMD, "--headless", "--invisible", "--convert-to", "pdf", out_path +
+              task['pdf_name'], "--outdir", out_path])
 
+    '''
+    Looks like below is not used anywhere
 
-params = {
-	'auction':'NK225_T_close', 
-	'qty':'80', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Big',
-	'period': 'Close',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_grasshopper_items_from_url(client, params, qty_dict, metadata)
-
-print 'Nikkei 80 Big Close'
-out_path = write_to_xlsx('NikkeiBigClose80.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call([OFFICE_CMD, "--headless", "--invisible", "--convert-to", "pdf", out_path +
-      "NK225_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", out_path])
-
-params = {
-	'auction':'NK225_T_open', 
-	'qty':'80', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Big',
-	'period': 'Open',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_grasshopper_items_from_url(client, params, qty_dict, metadata)
-
-print 'Nikkei 80 Big Open'
-write_to_xlsx('NikkeiBigOpen80.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/NK225_T_open_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
+    fileparams = {
+        "company": "Grasshopper",
+        "symbol":"NK225M",
+        "period": "T_close",
+        "filename": "{company}_{symbol_short}_{period}_{date}",
+        "qty" : "50",
+        "match_price": "",
+        "date": yesterday_date
+    }
 
 
-params = {
-	'auction':'NK225M_T_close', 
-	'qty':'250', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Mini',
-	'period': 'Close',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
+    # params = {'auction':fileparams['symbol'] + '_' + fileparams['period'], 'qty':fileparams['qty'], 'roll':'n'}
+    # items = get_normal_items_from_url(client, params, fileparams)
+    # write_to_file(fileparams['filename']'.txt', items)
+    # json.dump(d, open("text.txt",'w'))
+    '''
 
-print 'Nikkei 250 Mini Close'
-write_to_xlsx('NikkeiMiniClose250.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/NK225M_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
-
-params = {
-	'auction':'NK225M_T_open', 
-	'qty':'250', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Mini',
-	'period': 'Open',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
-
-print 'Nikkei 250 Mini Open'
-write_to_xlsx('NikkeiMiniOpen250.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/NK225M_T_open_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
-
-params = {
-	'auction':'TPX_T_close', 
-	'qty':'50', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Topix',
-	'period': 'Close',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
-
-print 'Topx 50 Close'
-write_to_xlsx('TopixClose50.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/TPX_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
-
-params = {
-	'auction':'TPX_T_open', 
-	'qty':'50', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Topix',
-	'period': 'Open',
-	'filename_prefix': ''
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
-
-print 'Topx 50 Open'
-write_to_xlsx('TopixOpen50.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/TPX_T_open_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
-
-params = {
-	'auction':'NK225_T_close', 
-	'qty':'40', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Big',
-	'period': 'Close', 
-	'filename_prefix': 'Derwin40_'
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
-
-print 'Derwin Nikkei 40 Close'
-write_to_xlsx('DerwinNikkei40.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/Derwin40_NK225_T_close_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
-
-params = {
-	'auction':'NK225_T_open', 
-	'qty':'40', 
-	'date':yesterday_date_in_iso,
-	'symbol': 'Nikkei Big',
-	'period': 'Open', 
-	'filename_prefix': 'Derwin40_'
-}
-qty_dict = {}
-items = get_normal_items_from_url(client, params, qty_dict, metadata)
-
-print 'Derwin Nikkei 40 Open'
-write_to_xlsx('DerwinNikkei40.xlsx', items, qty_dict, metadata)
-
-## write a function to convert the xlsx into pdf using libreoffice
-call(["libreoffice", "--headless", "--invisible", "--convert-to", "pdf", "/src/Apps/DailyAuctionsReportTool/output/Derwin40_NK225_T_open_" + yesterday_date_in_iso + ".xlsx", "--outdir", "/src/Apps/DailyAuctionsReportTool/output"])
+if __name__ == "__main__":
+    do_auction_reports()
