@@ -53,7 +53,7 @@ def lambda_handler(event, context):
     try:
         instance = start_ec2(ec2, EC2_ID)
         generate_report_on_server(instance.public_ip_address)
-        stop_ec2()
+        stop_ec2(ec2, EC2_ID)
     except:
         print('something went wrong')
         raise
