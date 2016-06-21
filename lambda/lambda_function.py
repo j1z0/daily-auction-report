@@ -49,16 +49,13 @@ def generate_report_on_server(ip):
 
 def lambda_handler(event, context):
     ec2 = boto3.resource('ec2', region_name="ap-northeast-1")
-    print('connecting to s3')
+    print('connecting to AWS ec2 resource')
     try:
         instance = start_ec2(ec2, EC2_ID)
         generate_report_on_server(instance.public_ip_address)
-        #stop_ec2()
+        stop_ec2()
     except:
         print('something went wrong')
         raise
 
     return  "All good"
-
-if __name__ == "__main__":
-    lambda_handler(1,1)
